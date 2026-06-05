@@ -205,6 +205,18 @@
   let recognition = null;
   let currentLang = null;
 
+  // ── ボイスをあらかじめキャッシュ（スマホは非同期で読み込まれるため） ──
+  let cachedVoices = [];
+
+  function loadVoices() {
+    const v = window.speechSynthesis.getVoices();
+    if (v.length > 0) cachedVoices = v;
+  }
+
+  // voiceschanged イベントで確実にキャッシュ
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices(); // 同期で取得できる場合も対応
+
   // ── 録音トグル ──
   function toggleRec(lang) {
     if (currentLang === lang) { stopRec(); }
@@ -325,24 +337,45 @@
   }
 
   // ── 読み上げ ──
-  // スマホで正しい言語で読み上げるため、ボイス一覧から言語コードが一致するものを明示的に選ぶ
   function speak(text, langCode) {
     if (!text) return;
     window.speechSynthesis.cancel();
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang  = langCode;
-    utter.rate  = 1.0;
-    utter.pitch = 1.0;
+    // キャッシュが空なら再取得を試みる
+    if (cachedVoices.length === 0) cachedVoices = window.speechSynthesis.getVoices();
 
-    // ボイス一覧から langCode に合うものを探して明示的に指定
-    // （指定しないとスマホが前回のボイスをそのまま使ってしまう問題を防ぐ）
-    const voices = window.speechSynthesis.getVoices();
-    const matched = voices.find(v => v.lang === langCode)
-                 || voices.find(v => v.lang.startsWith(langCode.slice(0, 2)));
-    if (matched) utter.voice = matched;
+    const doSpeak = () => {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang  = langCode;
+      utter.rate  = 1.0;
+      utter.pitch = 1.0;
 
-    window.speechSynthesis.speak(utter);
+      // 完全一致 → 前方一致の順で日本語/中国語ボイスを探す
+      const matched = cachedVoices.find(v => v.lang === langCode)
+                   || cachedVoices.find(v => v.lang.startsWith(langCode.slice(0, 2)));
+
+      if (matched) {
+        utter.voice = matched;  // 明示的に指定（スマホの言語混同を防ぐ）
+      } else if (langCode === 'ja-JP') {
+        // 日本語ボイスが見つからない場合に警告（Android で日本語TTS未インストールの可能性）
+        console.warn('日本語ボイスが見つかりません。スマホの設定 > 言語 > 音声合成で日本語をインストールしてください。');
+      }
+
+      window.speechSynthesis.speak(utter);
+    };
+
+    // スマホでボイスがまだ読み込まれていない場合は少し待って再試行
+    if (cachedVoices.length > 0) {
+      doSpeak();
+    } else {
+      const waitAndSpeak = () => {
+        cachedVoices = window.speechSynthesis.getVoices();
+        doSpeak();
+      };
+      window.speechSynthesis.onvoiceschanged = waitAndSpeak;
+      // 1秒後にも強制実行（onvoiceschangedが発火しない機種対策）
+      setTimeout(waitAndSpeak, 1000);
+    }
   }
 
   // ── 履歴クリア ──

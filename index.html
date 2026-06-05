@@ -7,9 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
-      height: 100%;
-    }
+    html, body { height: 100%; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
@@ -30,7 +28,6 @@
       flex-shrink: 0;
     }
 
-    /* ── 2分割レイアウト ── */
     .panels {
       flex: 1;
       display: grid;
@@ -50,11 +47,8 @@
     }
 
     /* 上パネルは相手側に向けて逆さま */
-    .panel.top {
-      transform: rotate(180deg);
-    }
+    .panel.top { transform: rotate(180deg); }
 
-    /* ── ヘッダー行（ラベル＋クリアボタン） ── */
     .panel-header {
       display: flex;
       align-items: center;
@@ -84,19 +78,7 @@
     }
     .clear-btn:active { background: #333; }
 
-    /* ── 音声選択 ── */
-    .voice-select {
-      background: #111;
-      border: 1px solid #333;
-      color: #aaa;
-      font-size: 12px;
-      padding: 4px 6px;
-      border-radius: 8px;
-      width: 100%;
-      flex-shrink: 0;
-    }
-
-    /* ── 履歴ログ ── */
+    /* 履歴ログ */
     .log-box {
       flex: 1;
       background: #111;
@@ -108,7 +90,6 @@
       gap: 8px;
     }
 
-    /* 発話ごとのカード */
     .log-entry {
       border-left: 2px solid #333;
       padding-left: 8px;
@@ -127,16 +108,14 @@
       line-height: 1.5;
     }
 
-    /* ライブ認識中テキスト */
+    /* 認識中ライブテキスト */
     .live-text {
       font-size: 13px;
       color: #f90;
       min-height: 18px;
       flex-shrink: 0;
-      padding: 0 2px;
     }
 
-    /* ── マイクボタン ── */
     .mic-btn {
       width: 100%;
       padding: 12px;
@@ -145,7 +124,6 @@
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -196,9 +174,6 @@
       <div class="lang-label"><span class="flag">🇨🇳</span> 中文 → 日本語</div>
       <button class="clear-btn" onclick="clearLog('ZH')">クリア</button>
     </div>
-    <select class="voice-select" id="voiceZH">
-      <option value="">🔊 音声を選択中...</option>
-    </select>
     <div class="log-box" id="logZH"></div>
     <div class="live-text" id="liveZH"></div>
     <button class="mic-btn" id="btnZH" onclick="toggleRec('zh-CN')">
@@ -212,9 +187,6 @@
       <div class="lang-label"><span class="flag">🇯🇵</span> 日本語 → 中文</div>
       <button class="clear-btn" onclick="clearLog('JA')">クリア</button>
     </div>
-    <select class="voice-select" id="voiceJA">
-      <option value="">🔊 音声を選択中...</option>
-    </select>
     <div class="log-box" id="logJA"></div>
     <div class="live-text" id="liveJA"></div>
     <button class="mic-btn" id="btnJA" onclick="toggleRec('ja-JP')">
@@ -227,145 +199,75 @@
 <div class="notice">Chrome推奨 | マイクアクセスを許可してください</div>
 
 <script>
-  // ── ブラウザ対応チェック ──
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRec) {
-    alert('音声認識非対応です。Chrome（Android/PC）をお使いください。');
-  }
+  if (!SpeechRec) alert('音声認識非対応です。Chrome（Android/PC）をお使いください。');
 
-  let recognition = null;  // 現在動いているSpeechRecognition
-  let currentLang = null;  // 現在録音中の言語
-
-  // ── 音声リストを取得してセレクトボックスに追加 ──
-  function loadVoices() {
-    const voices = window.speechSynthesis.getVoices();
-
-    // 日本語ボイス（ja-JP または ja）
-    const jaVoices = voices.filter(v => v.lang.startsWith('ja'));
-    const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
-
-    fillSelect('voiceJA', jaVoices, 'ja-JP');
-    fillSelect('voiceZH', zhVoices, 'zh-CN');
-  }
-
-  function fillSelect(selectId, voiceList, fallbackLang) {
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = '';
-
-    if (voiceList.length === 0) {
-      // 対応ボイスがない場合はデフォルトのみ
-      sel.innerHTML = `<option value="${fallbackLang}">🔊 デフォルト</option>`;
-      return;
-    }
-
-    voiceList.forEach((v, i) => {
-      // 名前から男女を推測（ブラウザによって名前が違う）
-      const isFemale = /female|woman|f\b|kyoko|haruka|mei|tian|ying|hui/i.test(v.name);
-      const isMale   = /male|man|m\b|otoya|daniel|ming|long/i.test(v.name);
-      const gender   = isFemale ? '👩' : isMale ? '👨' : '🔊';
-      const opt = document.createElement('option');
-      opt.value = v.name;  // 名前でボイスを特定
-      opt.textContent = `${gender} ${v.name}`;
-      if (i === 0) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  }
-
-  // voiceschangedイベントで読み込み（ブラウザによって非同期）
-  window.speechSynthesis.onvoiceschanged = loadVoices;
-  loadVoices();  // 同期で取得できる場合も対応
+  let recognition = null;
+  let currentLang = null;
 
   // ── 録音トグル ──
   function toggleRec(lang) {
-    if (currentLang === lang) {
-      stopRec();
-    } else {
-      stopRec();
-      startRec(lang);
-    }
+    if (currentLang === lang) { stopRec(); }
+    else { stopRec(); startRec(lang); }
   }
 
   function startRec(lang) {
     currentLang = lang;
-    const isJA = lang === 'ja-JP';
-    const btn  = document.getElementById(isJA ? 'btnJA' : 'btnZH');
+    const isJA  = lang === 'ja-JP';
+    const btn   = document.getElementById(isJA ? 'btnJA' : 'btnZH');
     const liveEl = document.getElementById(isJA ? 'liveJA' : 'liveZH');
 
     btn.classList.add('recording');
     btn.innerHTML = '<span class="dot"></span> ⏹ 停止';
     liveEl.textContent = '🎤 聞き取り中...';
 
-    recognition = new SpeechRec();
-    recognition.lang = lang;
-    recognition.interimResults = true;
-    recognition.continuous = false;  // 重複防止のためfalseに変更
+    recognition = buildRecognition(lang);
+    recognition.start();
+  }
 
-    recognition.onresult = (e) => {
+  // SpeechRecognitionオブジェクトを生成する関数（重複防止のためcontinuous:false）
+  function buildRecognition(lang) {
+    const isJA  = lang === 'ja-JP';
+    const liveEl = document.getElementById(isJA ? 'liveJA' : 'liveZH');
+
+    const rec = new SpeechRec();
+    rec.lang = lang;
+    rec.interimResults = true;
+    rec.continuous = false;  // 1発話ごとに区切る（重複防止）
+    rec.maxAlternatives = 1;
+
+    rec.onresult = (e) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          // 確定テキスト → 翻訳してログに追加
           liveEl.textContent = '';
-          translate(t.trim(), lang);
+          translate(t.trim(), lang);  // 確定したら翻訳
         } else {
           interim += t;
         }
       }
-      // 認識途中のテキストをライブ表示
       if (interim) liveEl.textContent = '🎤 ' + interim;
     };
 
-    recognition.onerror = (e) => {
-      if (e.error === 'no-speech') {
-        // 無音のとき → そのまま再開
-        if (currentLang === lang) restartRec(lang);
-        return;
-      }
-      console.warn('音声認識エラー:', e.error);
+    rec.onerror = (e) => {
+      // no-speechは無音なので無視して再起動
+      if (e.error === 'no-speech') { restart(lang); return; }
       stopRec();
     };
 
-    recognition.onend = () => {
-      // 録音継続中なら再起動（continuous:falseの代替）
-      if (currentLang === lang) restartRec(lang);
-    };
+    // 1発話終わったら自動で再起動（継続録音）
+    rec.onend = () => { if (currentLang === lang) restart(lang); };
 
-    recognition.start();
+    return rec;
   }
 
-  function restartRec(lang) {
-    // 少し間を置いてから再起動（重複防止）
+  // 少し間を置いて再起動（重複防止のため200ms待つ）
+  function restart(lang) {
     setTimeout(() => {
-      if (currentLang === lang) {
-        recognition = new SpeechRec();
-        recognition.lang = lang;
-        recognition.interimResults = true;
-        recognition.continuous = false;
-
-        const isJA = lang === 'ja-JP';
-        const liveEl = document.getElementById(isJA ? 'liveJA' : 'liveZH');
-
-        recognition.onresult = (e) => {
-          let interim = '';
-          for (let i = e.resultIndex; i < e.results.length; i++) {
-            const t = e.results[i][0].transcript;
-            if (e.results[i].isFinal) {
-              liveEl.textContent = '';
-              translate(t.trim(), lang);
-            } else {
-              interim += t;
-            }
-          }
-          if (interim) liveEl.textContent = '🎤 ' + interim;
-        };
-        recognition.onerror = (e) => {
-          if (e.error === 'no-speech') { if (currentLang === lang) restartRec(lang); return; }
-          stopRec();
-        };
-        recognition.onend = () => { if (currentLang === lang) restartRec(lang); };
-        recognition.start();
-      }
+      if (currentLang !== lang) return;
+      recognition = buildRecognition(lang);
+      recognition.start();
     }, 200);
   }
 
@@ -379,14 +281,12 @@
     currentLang = null;
 
     if (prev === 'ja-JP') {
-      const btn = document.getElementById('btnJA');
-      btn.classList.remove('recording');
-      btn.innerHTML = '<span class="dot"></span> 🎙 日本語で話す';
+      document.getElementById('btnJA').classList.remove('recording');
+      document.getElementById('btnJA').innerHTML = '<span class="dot"></span> 🎙 日本語で話す';
       document.getElementById('liveJA').textContent = '';
     } else if (prev === 'zh-CN') {
-      const btn = document.getElementById('btnZH');
-      btn.classList.remove('recording');
-      btn.innerHTML = '<span class="dot"></span> 🎙 中文で話す';
+      document.getElementById('btnZH').classList.remove('recording');
+      document.getElementById('btnZH').innerHTML = '<span class="dot"></span> 🎙 中文で話す';
       document.getElementById('liveZH').textContent = '';
     }
   }
@@ -395,13 +295,13 @@
   async function translate(text, srcLang) {
     if (!text) return;
 
-    const isJA = srcLang === 'ja-JP';
-    const sl   = isJA ? 'ja' : 'zh-CN';
-    const tl   = isJA ? 'zh-CN' : 'ja';
-    const tlSpeakLang = isJA ? 'zh-CN' : 'ja-JP';  // 読み上げ用言語コード
-    const logEl = document.getElementById(isJA ? 'logJA' : 'logZH');
+    const isJA     = srcLang === 'ja-JP';
+    const sl       = isJA ? 'ja' : 'zh-CN';
+    const tl       = isJA ? 'zh-CN' : 'ja';
+    const speakLang = isJA ? 'zh-CN' : 'ja-JP';  // 読み上げる言語
+    const logEl    = document.getElementById(isJA ? 'logJA' : 'logZH');
 
-    // ローディング表示
+    // ログにエントリを追加
     const entry = document.createElement('div');
     entry.className = 'log-entry';
     entry.innerHTML = `<div class="log-original">${text}</div><div class="log-translated">翻訳中...</div>`;
@@ -414,19 +314,19 @@
       const json = await res.json();
       const translated = json[0].map(seg => seg[0]).join('');
 
-      // ログ更新
       entry.querySelector('.log-translated').textContent = translated;
       logEl.scrollTop = logEl.scrollHeight;
 
-      // 読み上げ（翻訳先言語で）
-      speak(translated, tlSpeakLang, isJA ? 'voiceJA' : 'voiceZH');
-    } catch (err) {
+      // 翻訳先の言語で読み上げ
+      speak(translated, speakLang);
+    } catch {
       entry.querySelector('.log-translated').textContent = '⚠ 翻訳失敗（通信確認）';
     }
   }
 
-  // ── 読み上げ（選択したボイスを使用） ──
-  function speak(text, langCode, voiceSelectId) {
+  // ── 読み上げ ──
+  // スマホで正しい言語で読み上げるため、ボイス一覧から言語コードが一致するものを明示的に選ぶ
+  function speak(text, langCode) {
     if (!text) return;
     window.speechSynthesis.cancel();
 
@@ -435,12 +335,12 @@
     utter.rate  = 1.0;
     utter.pitch = 1.0;
 
-    // セレクトボックスで選んだボイスを適用
-    const selectedName = document.getElementById(voiceSelectId).value;
-    if (selectedName) {
-      const voice = window.speechSynthesis.getVoices().find(v => v.name === selectedName);
-      if (voice) utter.voice = voice;
-    }
+    // ボイス一覧から langCode に合うものを探して明示的に指定
+    // （指定しないとスマホが前回のボイスをそのまま使ってしまう問題を防ぐ）
+    const voices = window.speechSynthesis.getVoices();
+    const matched = voices.find(v => v.lang === langCode)
+                 || voices.find(v => v.lang.startsWith(langCode.slice(0, 2)));
+    if (matched) utter.voice = matched;
 
     window.speechSynthesis.speak(utter);
   }

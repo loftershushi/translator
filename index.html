@@ -23,11 +23,11 @@
 
     header {
       text-align: center;
-      padding: 16px;
-      font-size: 14px;
-      color: #888;
+      padding: 10px;
+      font-size: 13px;
+      color: #666;
       letter-spacing: 2px;
-      text-transform: uppercase;
+      flex-shrink: 0;
     }
 
     /* ── 2分割レイアウト ── */
@@ -37,20 +37,29 @@
       grid-template-rows: 1fr 1fr;
       gap: 2px;
       background: #222;
+      overflow: hidden;
     }
 
     .panel {
       background: #1a1a1a;
       display: flex;
       flex-direction: column;
-      padding: 16px;
-      gap: 10px;
-      position: relative;
+      padding: 10px;
+      gap: 8px;
+      overflow: hidden;
     }
 
-    /* 上パネル（中国語→日本語）は上下反転して持ちやすく */
+    /* 上パネルは相手側に向けて逆さま */
     .panel.top {
       transform: rotate(180deg);
+    }
+
+    /* ── ヘッダー行（ラベル＋クリアボタン） ── */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
     }
 
     .lang-label {
@@ -62,42 +71,78 @@
       gap: 6px;
     }
 
-    .lang-label .flag { font-size: 18px; }
+    .lang-label .flag { font-size: 16px; }
 
-    .transcript-box {
+    .clear-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #555;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .clear-btn:active { background: #333; }
+
+    /* ── 音声選択 ── */
+    .voice-select {
+      background: #111;
+      border: 1px solid #333;
+      color: #aaa;
+      font-size: 12px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    /* ── 履歴ログ ── */
+    .log-box {
       flex: 1;
       background: #111;
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 8px;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      overflow-y: auto;
-      min-height: 80px;
     }
 
-    .original-text {
+    /* 発話ごとのカード */
+    .log-entry {
+      border-left: 2px solid #333;
+      padding-left: 8px;
+    }
+
+    .log-original {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 2px;
+    }
+
+    .log-translated {
       font-size: 15px;
-      color: #aaa;
-      line-height: 1.5;
-      min-height: 20px;
-    }
-
-    .translated-text {
-      font-size: 18px;
       color: #fff;
       font-weight: 600;
-      line-height: 1.6;
-      min-height: 24px;
+      line-height: 1.5;
+    }
+
+    /* ライブ認識中テキスト */
+    .live-text {
+      font-size: 13px;
+      color: #f90;
+      min-height: 18px;
+      flex-shrink: 0;
+      padding: 0 2px;
     }
 
     /* ── マイクボタン ── */
     .mic-btn {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
       border: none;
-      border-radius: 14px;
-      font-size: 16px;
+      border-radius: 12px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -105,23 +150,13 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      letter-spacing: 0.5px;
+      flex-shrink: 0;
     }
 
-    .panel.bottom .mic-btn {
-      background: #1a6ef5;
-      color: #fff;
-    }
+    .panel.bottom .mic-btn { background: #1a6ef5; color: #fff; }
+    .panel.top    .mic-btn { background: #e63;    color: #fff; }
 
-    .panel.top .mic-btn {
-      background: #e63; /* 赤系でトップを区別 */
-      color: #fff;
-    }
-
-    .mic-btn.recording {
-      animation: pulse 1s infinite;
-    }
-
+    .mic-btn.recording { animation: pulse 1s infinite; }
     .panel.bottom .mic-btn.recording { background: #0050d0; }
     .panel.top    .mic-btn.recording { background: #c40; }
 
@@ -132,21 +167,20 @@
     }
 
     .dot {
-      width: 10px; height: 10px;
+      width: 9px; height: 9px;
       border-radius: 50%;
       background: currentColor;
       opacity: 0;
     }
-
     .recording .dot { opacity: 1; animation: blink 0.8s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-    /* ── 注意書き ── */
     .notice {
       text-align: center;
-      font-size: 11px;
-      color: #444;
-      padding: 8px;
+      font-size: 10px;
+      color: #333;
+      padding: 4px;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -156,58 +190,96 @@
 
 <div class="panels">
 
-  <!-- 上パネル：中国語 → 日本語（相手側） -->
-  <div class="panel top" id="panelZH">
-    <div class="lang-label">
-      <span class="flag">🇨🇳</span> 中文 → 日本語
+  <!-- 上パネル：中国語 → 日本語（相手側・逆さま） -->
+  <div class="panel top">
+    <div class="panel-header">
+      <div class="lang-label"><span class="flag">🇨🇳</span> 中文 → 日本語</div>
+      <button class="clear-btn" onclick="clearLog('ZH')">クリア</button>
     </div>
-    <div class="transcript-box">
-      <div class="original-text"  id="origZH">中文を話してください…</div>
-      <div class="translated-text" id="transZH"></div>
-    </div>
+    <select class="voice-select" id="voiceZH">
+      <option value="">🔊 音声を選択中...</option>
+    </select>
+    <div class="log-box" id="logZH"></div>
+    <div class="live-text" id="liveZH"></div>
     <button class="mic-btn" id="btnZH" onclick="toggleRec('zh-CN')">
-      <span class="dot"></span>
-      🎙 中文で話す
+      <span class="dot"></span> 🎙 中文で話す
     </button>
   </div>
 
   <!-- 下パネル：日本語 → 中国語（自分側） -->
-  <div class="panel bottom" id="panelJA">
-    <div class="lang-label">
-      <span class="flag">🇯🇵</span> 日本語 → 中文
+  <div class="panel bottom">
+    <div class="panel-header">
+      <div class="lang-label"><span class="flag">🇯🇵</span> 日本語 → 中文</div>
+      <button class="clear-btn" onclick="clearLog('JA')">クリア</button>
     </div>
-    <div class="transcript-box">
-      <div class="original-text"  id="origJA">日本語を話してください…</div>
-      <div class="translated-text" id="transJA"></div>
-    </div>
+    <select class="voice-select" id="voiceJA">
+      <option value="">🔊 音声を選択中...</option>
+    </select>
+    <div class="log-box" id="logJA"></div>
+    <div class="live-text" id="liveJA"></div>
     <button class="mic-btn" id="btnJA" onclick="toggleRec('ja-JP')">
-      <span class="dot"></span>
-      🎙 日本語で話す
+      <span class="dot"></span> 🎙 日本語で話す
     </button>
   </div>
 
 </div>
 
-<div class="notice">※ マイクアクセスを許可してください　|　Chrome推奨</div>
+<div class="notice">Chrome推奨 | マイクアクセスを許可してください</div>
 
 <script>
-  // ── 状態管理 ──
-  let recognition = null;  // 現在動いているSpeechRecognition
-  let currentLang = null;  // 現在録音中の言語
-
   // ── ブラウザ対応チェック ──
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) {
-    alert('このブラウザは音声認識に対応していません。\nChrome（Android/PC）をお使いください。');
+    alert('音声認識非対応です。Chrome（Android/PC）をお使いください。');
   }
+
+  let recognition = null;  // 現在動いているSpeechRecognition
+  let currentLang = null;  // 現在録音中の言語
+
+  // ── 音声リストを取得してセレクトボックスに追加 ──
+  function loadVoices() {
+    const voices = window.speechSynthesis.getVoices();
+
+    // 日本語ボイス（ja-JP または ja）
+    const jaVoices = voices.filter(v => v.lang.startsWith('ja'));
+    const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+
+    fillSelect('voiceJA', jaVoices, 'ja-JP');
+    fillSelect('voiceZH', zhVoices, 'zh-CN');
+  }
+
+  function fillSelect(selectId, voiceList, fallbackLang) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '';
+
+    if (voiceList.length === 0) {
+      // 対応ボイスがない場合はデフォルトのみ
+      sel.innerHTML = `<option value="${fallbackLang}">🔊 デフォルト</option>`;
+      return;
+    }
+
+    voiceList.forEach((v, i) => {
+      // 名前から男女を推測（ブラウザによって名前が違う）
+      const isFemale = /female|woman|f\b|kyoko|haruka|mei|tian|ying|hui/i.test(v.name);
+      const isMale   = /male|man|m\b|otoya|daniel|ming|long/i.test(v.name);
+      const gender   = isFemale ? '👩' : isMale ? '👨' : '🔊';
+      const opt = document.createElement('option');
+      opt.value = v.name;  // 名前でボイスを特定
+      opt.textContent = `${gender} ${v.name}`;
+      if (i === 0) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // voiceschangedイベントで読み込み（ブラウザによって非同期）
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();  // 同期で取得できる場合も対応
 
   // ── 録音トグル ──
   function toggleRec(lang) {
     if (currentLang === lang) {
-      // 同じボタンを押したら停止
       stopRec();
     } else {
-      // 別のボタン or 初回 → 既存停止してから開始
       stopRec();
       startRec(lang);
     }
@@ -216,108 +288,166 @@
   function startRec(lang) {
     currentLang = lang;
     const isJA = lang === 'ja-JP';
-    const btn   = document.getElementById(isJA ? 'btnJA' : 'btnZH');
+    const btn  = document.getElementById(isJA ? 'btnJA' : 'btnZH');
+    const liveEl = document.getElementById(isJA ? 'liveJA' : 'liveZH');
 
-    // UIを録音中に
     btn.classList.add('recording');
     btn.innerHTML = '<span class="dot"></span> ⏹ 停止';
+    liveEl.textContent = '🎤 聞き取り中...';
 
-    // SpeechRecognition 設定
     recognition = new SpeechRec();
     recognition.lang = lang;
-    recognition.interimResults = true;   // 途中結果も表示
-    recognition.continuous = true;       // 継続モード
-
-    let finalText = '';
+    recognition.interimResults = true;
+    recognition.continuous = false;  // 重複防止のためfalseに変更
 
     recognition.onresult = (e) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          finalText += t;
-          translate(t, lang);  // 確定分だけ翻訳・読み上げ
+          // 確定テキスト → 翻訳してログに追加
+          liveEl.textContent = '';
+          translate(t.trim(), lang);
         } else {
           interim += t;
         }
       }
-      // 認識中テキスト表示
-      const origEl = document.getElementById(isJA ? 'origJA' : 'origZH');
-      origEl.textContent = finalText + interim;
+      // 認識途中のテキストをライブ表示
+      if (interim) liveEl.textContent = '🎤 ' + interim;
     };
 
     recognition.onerror = (e) => {
+      if (e.error === 'no-speech') {
+        // 無音のとき → そのまま再開
+        if (currentLang === lang) restartRec(lang);
+        return;
+      }
       console.warn('音声認識エラー:', e.error);
-      if (e.error === 'no-speech') return;  // 無音は無視
       stopRec();
     };
 
-    // iOSはcontinuousが止まりやすいので自動再起動
     recognition.onend = () => {
-      if (currentLang === lang) recognition.start();
+      // 録音継続中なら再起動（continuous:falseの代替）
+      if (currentLang === lang) restartRec(lang);
     };
 
     recognition.start();
   }
 
+  function restartRec(lang) {
+    // 少し間を置いてから再起動（重複防止）
+    setTimeout(() => {
+      if (currentLang === lang) {
+        recognition = new SpeechRec();
+        recognition.lang = lang;
+        recognition.interimResults = true;
+        recognition.continuous = false;
+
+        const isJA = lang === 'ja-JP';
+        const liveEl = document.getElementById(isJA ? 'liveJA' : 'liveZH');
+
+        recognition.onresult = (e) => {
+          let interim = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) {
+              liveEl.textContent = '';
+              translate(t.trim(), lang);
+            } else {
+              interim += t;
+            }
+          }
+          if (interim) liveEl.textContent = '🎤 ' + interim;
+        };
+        recognition.onerror = (e) => {
+          if (e.error === 'no-speech') { if (currentLang === lang) restartRec(lang); return; }
+          stopRec();
+        };
+        recognition.onend = () => { if (currentLang === lang) restartRec(lang); };
+        recognition.start();
+      }
+    }, 200);
+  }
+
   function stopRec() {
     if (recognition) {
-      recognition.onend = null;  // 自動再起動を無効化
+      recognition.onend = null;
       recognition.stop();
       recognition = null;
     }
-    const prevLang = currentLang;
+    const prev = currentLang;
     currentLang = null;
 
-    // ボタンをリセット
-    if (prevLang === 'ja-JP') {
+    if (prev === 'ja-JP') {
       const btn = document.getElementById('btnJA');
       btn.classList.remove('recording');
       btn.innerHTML = '<span class="dot"></span> 🎙 日本語で話す';
-    } else if (prevLang === 'zh-CN') {
+      document.getElementById('liveJA').textContent = '';
+    } else if (prev === 'zh-CN') {
       const btn = document.getElementById('btnZH');
       btn.classList.remove('recording');
       btn.innerHTML = '<span class="dot"></span> 🎙 中文で話す';
+      document.getElementById('liveZH').textContent = '';
     }
   }
 
-  // ── 翻訳（Google非公式エンドポイント、無料・APIキー不要） ──
+  // ── 翻訳（Google非公式エンドポイント・無料） ──
   async function translate(text, srcLang) {
-    if (!text.trim()) return;
+    if (!text) return;
 
-    const isJA  = srcLang === 'ja-JP';
-    const sl    = isJA ? 'ja' : 'zh-CN';
-    const tl    = isJA ? 'zh-CN' : 'ja-JP';  // 読み上げ言語に合わせてja-JPを使う
-    const transEl = document.getElementById(isJA ? 'transJA' : 'transZH');
+    const isJA = srcLang === 'ja-JP';
+    const sl   = isJA ? 'ja' : 'zh-CN';
+    const tl   = isJA ? 'zh-CN' : 'ja';
+    const tlSpeakLang = isJA ? 'zh-CN' : 'ja-JP';  // 読み上げ用言語コード
+    const logEl = document.getElementById(isJA ? 'logJA' : 'logZH');
+
+    // ローディング表示
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<div class="log-original">${text}</div><div class="log-translated">翻訳中...</div>`;
+    logEl.appendChild(entry);
+    logEl.scrollTop = logEl.scrollHeight;
 
     try {
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
       const res  = await fetch(url);
       const json = await res.json();
-
-      // レスポンス構造：[[["翻訳文","原文",...],...],...]
       const translated = json[0].map(seg => seg[0]).join('');
-      transEl.textContent = translated;
 
-      // 読み上げ
-      speak(translated, tl);
+      // ログ更新
+      entry.querySelector('.log-translated').textContent = translated;
+      logEl.scrollTop = logEl.scrollHeight;
+
+      // 読み上げ（翻訳先言語で）
+      speak(translated, tlSpeakLang, isJA ? 'voiceJA' : 'voiceZH');
     } catch (err) {
-      console.error('翻訳エラー:', err);
-      transEl.textContent = '⚠ 翻訳失敗（通信を確認）';
+      entry.querySelector('.log-translated').textContent = '⚠ 翻訳失敗（通信確認）';
     }
   }
 
-  // ── 読み上げ（Web Speech API TTS） ──
-  function speak(text, langCode) {
+  // ── 読み上げ（選択したボイスを使用） ──
+  function speak(text, langCode, voiceSelectId) {
     if (!text) return;
-    window.speechSynthesis.cancel();  // 前の読み上げをキャンセル
+    window.speechSynthesis.cancel();
 
     const utter = new SpeechSynthesisUtterance(text);
-    // langCodeは 'zh-CN' or 'ja' → そのまま渡す
-    utter.lang  = langCode;  // 呼び出し元から正確な言語コードを受け取る
-    utter.rate  = 1.0;   // 速度（0.5〜2.0）
+    utter.lang  = langCode;
+    utter.rate  = 1.0;
     utter.pitch = 1.0;
+
+    // セレクトボックスで選んだボイスを適用
+    const selectedName = document.getElementById(voiceSelectId).value;
+    if (selectedName) {
+      const voice = window.speechSynthesis.getVoices().find(v => v.name === selectedName);
+      if (voice) utter.voice = voice;
+    }
+
     window.speechSynthesis.speak(utter);
+  }
+
+  // ── 履歴クリア ──
+  function clearLog(panel) {
+    document.getElementById('log' + panel).innerHTML = '';
   }
 </script>
 
